@@ -1,26 +1,28 @@
+// script.js
+
+// Words module
+const words = {
+    easy: ["CASA", "PELO", "MANO", "GATO", "PERRO", "MESA", "SILLA", "AGUA", "BOCA", "DEDO"],
+    medium: ["ÁRBOL", "COCHE", "PLAYA", "RELOJ", "FLOR", "LECHE", "FUEGO", "HIELO", "HUEVO", "QUESO"],
+    hard: ["ÁCIDO", "ÁGIL", "ÁTOMO", "BUQUE", "CÉNIT", "CUÓRUM", "DÚCTIL", "ÉXITO", "FÚTIL", "GNOMO"]
+};
+
+function getRandomWord(difficulty) {
+    return words[difficulty][Math.floor(Math.random() * words[difficulty].length)];
+}
+
+// Game state
 let targetWord = '';
 let currentRow = 0;
 let currentCol = 0;
 let gameOver = false;
-let difficulty = 'normal'; // 'easy', 'normal', 'hard'
-let timeLeft = 300; // 5 minutes
+let difficulty = 'medium';
+let timeLeft = 300;
 let timerInterval;
 
-async function initGame() {
-    await fetchNewWord();
-    const keyboard = document.getElementById('teclado');
-    if (keyboard) {
-        keyboard.addEventListener('click', handleKeyboardClick);
-    }
-    document.addEventListener('keydown', handleKeyPress);
-    initializeBoard();
-    startTimer();
-}
-
-// Function to initialize the game board
+// Board module
 function initializeBoard() {
     const board = document.getElementById('tablero');
-    // Assuming 5 rows for guesses
     for (let r = 0; r < 5; r++) {
         const row = document.createElement('div');
         row.className = 'fila';
@@ -33,44 +35,74 @@ function initializeBoard() {
     }
 }
 
-// Fetch a new word using the API
-async function fetchNewWord() {
-    try {
-        const response = await fetch('https://random-word-api.herokuapp.com/word?lang=es&number=5&length=5');
-        if (!response.ok) {
-            throw new Error('Failed to fetch word');
+function updateCell(row, col, value) {
+    const cell = document.querySelector(`#tablero .fila:nth-child(${row + 1}) .caja:nth-child(${col + 1})`);
+    cell.textContent = value;
+}
+
+function colorRow(row, guessWord, targetWord) {
+    const rowCells = document.querySelectorAll(`#tablero .fila:nth-child(${row + 1}) .caja`);
+    const targetArray = targetWord.split('');
+
+    rowCells.forEach((cell, index) => {
+        if (guessWord[index] === targetWord[index]) {
+            cell.style.backgroundColor = 'green';
+            targetArray[index] = null;
         }
-        const data = await response.json();
-        targetWord = data[0].toUpperCase();
-        console.log("New word:", targetWord); // For debugging, remove in production
-    } catch (error) {
-        console.error('Error fetching word:', error);
-        // Fallback to a default word list if API fails
-        const defaultWords = ['AGUA', 'BOCA', 'CASA', 'DEDO', 'EDAD'];
-        targetWord = defaultWords[Math.floor(Math.random() * defaultWords.length)];
-    }
+    });
+
+    rowCells.forEach((cell, index) => {
+        if (cell.style.backgroundColor !== 'green') {
+            const targetIndex = targetArray.indexOf(guessWord[index]);
+            if (targetIndex !== -1) {
+                cell.style.backgroundColor = 'yellow';
+                targetArray[targetIndex] = null;
+            } else {
+                cell.style.backgroundColor = 'gray';
+            }
+        }
+    });
 }
 
-async function setDifficulty(level) {
-    difficulty = level;
-    await resetGame();
-}
-
-async function resetGame() {
-    currentRow = 0;
-    currentCol = 0;
-    gameOver = false;
-
-    // Clear the board
+function clearBoard() {
     document.querySelectorAll('#tablero .caja').forEach(cell => {
         cell.textContent = '';
         cell.style.backgroundColor = '';
     });
+}
 
-    // Fetch a new word
-    await fetchNewWord();
+// Keyboard module
+function initializeKeyboard() {
+    const keyboard = document.getElementById('teclado');
+    keyboard.addEventListener('click', handleKeyboardClick);
+    document.addEventListener('keydown', handleKeyPress);
+}
 
-    // Reset and start the timer
+function handleKeyboardClick(e) {
+    if (e.target.tagName === 'BUTTON') {
+        processInput(e.target.textContent.toLowerCase());
+    }
+}
+
+function handleKeyPress(e) {
+    const key = e.key.toLowerCase();
+    if (/^[a-zñ]$/.test(key) || key === 'enter' || key === 'backspace') {
+        processInput(key);
+    }
+}
+
+// Game logic module
+function setDifficulty(level) {
+    difficulty = level;
+    resetGame();
+}
+
+function resetGame() {
+    currentRow = 0;
+    currentCol = 0;
+    gameOver = false;
+    clearBoard();
+    targetWord = getRandomWord(difficulty);
     clearInterval(timerInterval);
     timeLeft = 300;
     updateTimerDisplay();
@@ -94,20 +126,6 @@ function updateTimerDisplay() {
     document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function handleKeyboardClick(e) {
-    if (e.target.tagName === 'BUTTON') {
-        const key = e.target.textContent.toLowerCase();
-        processInput(key);
-    }
-}
-
-function handleKeyPress(e) {
-    const key = e.key.toLowerCase();
-    if (/^[a-zñ]$/.test(key) || key === 'enter' || key === 'backspace') {
-        processInput(key);
-    }
-}
-
 function processInput(key) {
     if (gameOver) return;
 
@@ -118,15 +136,10 @@ function processInput(key) {
             currentCol--;
             updateCell(currentRow, currentCol, '');
         }
-    } else if (currentCol < 5 && /^[a-zñ]$/.test(key)) { // Include 'ñ' for Spanish
+    } else if (currentCol < 5 && /^[a-zñ]$/.test(key)) {
         updateCell(currentRow, currentCol, key.toUpperCase());
         currentCol++;
     }
-}
-
-function updateCell(row, col, value) {
-    const cell = document.querySelector(`#tablero .fila:nth-child(${row + 1}) .caja:nth-child(${col + 1})`);
-    cell.textContent = value;
 }
 
 function checkGuess() {
@@ -135,10 +148,10 @@ function checkGuess() {
         .join('');
 
     if (guess === targetWord) {
-        colorRow(currentRow, 'green');
+        colorRow(currentRow, guess, targetWord);
         endGame(true);
     } else {
-        colorRow(currentRow);
+        colorRow(currentRow, guess, targetWord);
         currentRow++;
         currentCol = 0;
 
@@ -148,39 +161,21 @@ function checkGuess() {
     }
 }
 
-function colorRow(row, allColor = null) {
-    const rowCells = document.querySelectorAll(`#tablero .fila:nth-child(${row + 1}) .caja`);
-    const guessWord = Array.from(rowCells).map(cell => cell.textContent).join('');
-    const targetArray = targetWord.split('');
-
-    rowCells.forEach((cell, index) => {
-        if (allColor) {
-            cell.style.backgroundColor = allColor;
-        } else if (guessWord[index] === targetWord[index]) {
-            cell.style.backgroundColor = 'green';
-            targetArray[index] = null;
-        }
-    });
-
-    if (!allColor) {
-        rowCells.forEach((cell, index) => {
-            if (cell.style.backgroundColor !== 'green') {
-                const targetIndex = targetArray.indexOf(guessWord[index]);
-                if (targetIndex !== -1) {
-                    cell.style.backgroundColor = 'yellow';
-                    targetArray[targetIndex] = null;
-                } else {
-                    cell.style.backgroundColor = 'gray';
-                }
-            }
-        });
-    }
-}
-
 function endGame(won) {
     gameOver = true;
     clearInterval(timerInterval);
-    alert(won ? 'Congratulations! You guessed the word!' : `Game over! The word was ${targetWord}`);
+    alert(won ? '¡Felicidades! ¡Adivinaste la palabra!' : `Juego terminado. La palabra era ${targetWord}`);
+}
+
+// Main initialization
+function initGame() {
+    initializeBoard();
+    initializeKeyboard();
+    resetGame();
+
+    document.getElementById('easy-btn').addEventListener('click', () => setDifficulty('easy'));
+    document.getElementById('medium-btn').addEventListener('click', () => setDifficulty('medium'));
+    document.getElementById('hard-btn').addEventListener('click', () => setDifficulty('hard'));
 }
 
 window.onload = initGame;
