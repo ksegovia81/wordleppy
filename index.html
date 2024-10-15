@@ -9,83 +9,50 @@
 <body>
     <h1>Mi Wordle KSK</h1>
     <div id="game-controls">
-        <button onclick="setDifficulty('easy')">Facil</button>
-        <button onclick="setDifficulty('normal')">Norm</button>
-        <button onclick="setDifficulty('hard')">Dif</button>
+        <button onclick="setDifficulty('easy')">Fácil</button>
+        <button onclick="setDifficulty('normal')">Normal</button>
+        <button onclick="setDifficulty('hard')">Difícil</button>
         <div id="timer">5:00</div>
     </div>
     <div id="tablero" class="matriz">
-        <div class="fila">
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-        </div>
-        <div class="fila">
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-        </div>
-        <div class="fila">
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-        </div>
-        <div class="fila">
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-        </div>
-        <div class="fila">
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-            <div class="caja"></div>
-        </div>
+        <!-- The board rows will be initialized dynamically in JavaScript -->
     </div>
 
     <div id="teclado" class="matriz">
         <div class="fila-letras">
-            <button>q</button>
-            <button>w</button>
-            <button>e</button>
-            <button>r</button>
-            <button>t</button>
-            <button>y</button>
-            <button>u</button>
-            <button>i</button>
-            <button>o</button>
-            <button>p</button>
+            <button>Q</button>
+            <button>W</button>
+            <button>E</button>
+            <button>R</button>
+            <button>T</button>
+            <button>Y</button>
+            <button>U</button>
+            <button>I</button>
+            <button>O</button>
+            <button>P</button>
         </div>
         <div class="fila-letras">
-            <button>a</button>
-            <button>s</button>
-            <button>d</button>
-            <button>f</button>
-            <button>g</button>
-            <button>h</button>
-            <button>j</button>
-            <button>k</button>
-            <button>l</button>
+            <button>A</button>
+            <button>S</button>
+            <button>D</button>
+            <button>F</button>
+            <button>G</button>
+            <button>H</button>
+            <button>J</button>
+            <button>K</button>
+            <button>L</button>
+            <button>Ñ</button>
         </div>
         <div class="fila-letras">
-            <button>Del</button>
-            <button>z</button>
-            <button>x</button>
-            <button>c</button>
-            <button>v</button>
-            <button>b</button>
-            <button>n</button>
-            <button>m</button>
-            <button>Enter</button>
+            <button onclick="processInput('backspace')">Del</button>
+            <button>Z</button>
+            <button>X</button>
+            <button>C</button>
+            <button>V</button>
+            <button>B</button>
+            <button>N</button>
+            <button>M</button>
+            <button onclick="processInput('enter')">Enter</button>
         </div>
     </div>
 
