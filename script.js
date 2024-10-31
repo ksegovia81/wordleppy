@@ -1,181 +1,143 @@
-// script.js
 
-// Words module
-const words = {
-    easy: ["CASA", "PELO", "MANO", "GATO", "PERRO", "MESA", "SILLA", "AGUA", "BOCA", "DEDO"],
-    medium: ["ÁRBOL", "COCHE", "PLAYA", "RELOJ", "FLOR", "LECHE", "FUEGO", "HIELO", "HUEVO", "QUESO"],
-    hard: ["ÁCIDO", "ÁGIL", "ÁTOMO", "BUQUE", "CÉNIT", "CUÓRUM", "DÚCTIL", "ÉXITO", "FÚTIL", "GNOMO"]
-};
 
-function getRandomWord(difficulty) {
-    return words[difficulty][Math.floor(Math.random() * words[difficulty].length)];
-}
-
-// Game state
-let targetWord = '';
+let targetWord = ""; 
+let attempts = 6;
+let currentGuess = "";
 let currentRow = 0;
-let currentCol = 0;
-let gameOver = false;
-let difficulty = 'medium';
-let timeLeft = 300;
 let timerInterval;
 
-// Board module
-function initializeBoard() {
-    const board = document.getElementById('tablero');
-    for (let r = 0; r < 5; r++) {
-        const row = document.createElement('div');
-        row.className = 'fila';
-        for (let c = 0; c < 5; c++) {
-            const cell = document.createElement('div');
-            cell.className = 'caja';
-            row.appendChild(cell);
-        }
-        board.appendChild(row);
+const tablero = document.getElementById("tablero");
+const easyBtn = document.getElementById("easy-btn");
+const mediumBtn = document.getElementById("medium-btn");
+const hardBtn = document.getElementById("hard-btn");
+const timerDisplay = document.getElementById("timer");
+const tecladoButtons = document.querySelectorAll("#teclado button");
+
+
+async function fetchRandomWord(length) {
+    try {
+        const response = await fetch(`https://random-word-api.herokuapp.com/word?lang=es&length=${length}`);
+        const data = await response.json();
+        targetWord = data[0].toUpperCase();
+        console.log(`Word to guess: ${targetWord}`); 
+    } catch (error) {
+        console.error("Error fetching word:", error);
     }
 }
 
-function updateCell(row, col, value) {
-    const cell = document.querySelector(`#tablero .fila:nth-child(${row + 1}) .caja:nth-child(${col + 1})`);
-    cell.textContent = value;
-}
 
-function colorRow(row, guessWord, targetWord) {
-    const rowCells = document.querySelectorAll(`#tablero .fila:nth-child(${row + 1}) .caja`);
-    const targetArray = targetWord.split('');
-
-    rowCells.forEach((cell, index) => {
-        if (guessWord[index] === targetWord[index]) {
-            cell.style.backgroundColor = 'green';
-            targetArray[index] = null;
-        }
-    });
-
-    rowCells.forEach((cell, index) => {
-        if (cell.style.backgroundColor !== 'green') {
-            const targetIndex = targetArray.indexOf(guessWord[index]);
-            if (targetIndex !== -1) {
-                cell.style.backgroundColor = 'yellow';
-                targetArray[targetIndex] = null;
-            } else {
-                cell.style.backgroundColor = 'gray';
-            }
-        }
-    });
-}
-
-function clearBoard() {
-    document.querySelectorAll('#tablero .caja').forEach(cell => {
-        cell.textContent = '';
-        cell.style.backgroundColor = '';
-    });
-}
-
-// Keyboard module
-function initializeKeyboard() {
-    const keyboard = document.getElementById('teclado');
-    keyboard.addEventListener('click', handleKeyboardClick);
-    document.addEventListener('keydown', handleKeyPress);
-}
-
-function handleKeyboardClick(e) {
-    if (e.target.tagName === 'BUTTON') {
-        processInput(e.target.textContent.toLowerCase());
-    }
-}
-
-function handleKeyPress(e) {
-    const key = e.key.toLowerCase();
-    if (/^[a-zñ]$/.test(key) || key === 'enter' || key === 'backspace') {
-        processInput(key);
-    }
-}
-
-// Game logic module
-function setDifficulty(level) {
-    difficulty = level;
-    resetGame();
-}
-
-function resetGame() {
+async function setupGame(difficulty = 5) {
+    await fetchRandomWord(difficulty);
     currentRow = 0;
-    currentCol = 0;
-    gameOver = false;
-    clearBoard();
-    targetWord = getRandomWord(difficulty);
-    clearInterval(timerInterval);
-    timeLeft = 300;
-    updateTimerDisplay();
-    startTimer();
+    currentGuess = "";
+    generateGrid(difficulty);
+    startTimer(300); // 
 }
 
-function startTimer() {
+
+function generateGrid(wordLength) {
+    tablero.innerHTML = "";
+    for (let i = 0; i < attempts; i++) {
+        const fila = document.createElement("div");
+        fila.classList.add("fila");
+        for (let j = 0; j < wordLength; j++) {
+            const caja = document.createElement("div");
+            caja.classList.add("caja");
+            fila.appendChild(caja);
+        }
+        tablero.appendChild(fila);
+    }
+}
+
+
+function startTimer(seconds) {
+    clearInterval(timerInterval);
+    let timeLeft = seconds;
+    updateTimerDisplay(timeLeft);
+
     timerInterval = setInterval(() => {
         timeLeft--;
-        updateTimerDisplay();
+        updateTimerDisplay(timeLeft);
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
-            endGame(false);
+            alert("Time's up! Game over!");
         }
     }, 1000);
 }
 
-function updateTimerDisplay() {
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+function updateTimerDisplay(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    timerDisplay.textContent = `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
-function processInput(key) {
-    if (gameOver) return;
 
-    if (key === 'enter') {
-        if (currentCol === 5) checkGuess();
-    } else if (key === 'backspace' || key === 'del') {
-        if (currentCol > 0) {
-            currentCol--;
-            updateCell(currentRow, currentCol, '');
-        }
-    } else if (currentCol < 5 && /^[a-zñ]$/.test(key)) {
-        updateCell(currentRow, currentCol, key.toUpperCase());
-        currentCol++;
+function handleLetterInput(letter) {
+    if (letter === "DEL") {
+        currentGuess = currentGuess.slice(0, -1);
+    } else if (letter === "ENTER") {
+        checkGuess();
+    } else if (currentGuess.length < targetWord.length) {
+        currentGuess += letter;
+    }
+    updateGrid();
+}
+
+
+function updateGrid() {
+    const filas = tablero.children;
+    const fila = filas[currentRow];
+    const cajas = fila ? fila.children : [];
+    for (let i = 0; i < targetWord.length; i++) {
+        cajas[i].textContent = currentGuess[i] || "";
     }
 }
+
 
 function checkGuess() {
-    const guess = Array.from(document.querySelectorAll(`#tablero .fila:nth-child(${currentRow + 1}) .caja`))
-        .map(cell => cell.textContent)
-        .join('');
-
-    if (guess === targetWord) {
-        colorRow(currentRow, guess, targetWord);
-        endGame(true);
-    } else {
-        colorRow(currentRow, guess, targetWord);
-        currentRow++;
-        currentCol = 0;
-
-        if (currentRow === 5) {
-            endGame(false);
+    if (currentGuess.length === targetWord.length) {
+        if (currentGuess === targetWord) {
+            alert("¡Felicidades! Has adivinado la palabra.");
+            clearInterval(timerInterval);
+        } else {
+            provideFeedback();
+            if (++currentRow >= attempts) {
+                alert(`¡Fin del juego! La palabra era ${targetWord}.`);
+                clearInterval(timerInterval);
+            }
+            currentGuess = "";
         }
     }
 }
 
-function endGame(won) {
-    gameOver = true;
-    clearInterval(timerInterval);
-    alert(won ? '¡Felicidades! ¡Adivinaste la palabra!' : `Juego terminado. La palabra era ${targetWord}`);
+
+function provideFeedback() {
+    const fila = tablero.children[currentRow];
+    const cajas = fila.children;
+
+    for (let i = 0; i < targetWord.length; i++) {
+        const caja = cajas[i];
+        const letter = currentGuess[i];
+        
+        if (letter === targetWord[i]) {
+            caja.style.backgroundColor = "#4CAF50"; 
+        } else if (targetWord.includes(letter)) {
+            caja.style.backgroundColor = "#FFC107"; 
+        } else {
+            caja.style.backgroundColor = "#D3D6DA"; 
+        }
+    }
 }
 
-// Main initialization
-function initGame() {
-    initializeBoard();
-    initializeKeyboard();
-    resetGame();
 
-    document.getElementById('easy-btn').addEventListener('click', () => setDifficulty('easy'));
-    document.getElementById('medium-btn').addEventListener('click', () => setDifficulty('medium'));
-    document.getElementById('hard-btn').addEventListener('click', () => setDifficulty('hard'));
-}
+easyBtn.onclick = () => setupGame(5);  
+mediumBtn.onclick = () => setupGame(5); 
+hardBtn.onclick = () => setupGame(5);   
 
-window.onload = initGame;
+
+tecladoButtons.forEach(button => {
+    button.addEventListener("click", () => handleLetterInput(button.textContent));
+});
+
+
+window.onload = () => setupGame(5); 
